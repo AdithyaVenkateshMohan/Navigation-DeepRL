@@ -13,7 +13,8 @@ BATCH_SIZE = 64         # minibatch size
 GAMMA = 0.99            # discount factor
 TAU = 1e-3              # for soft update of target parameters
 LR = 5e-4               # learning rate 
-UPDATE_EVERY = 4        # how often to update the network
+UPDATE_EVERY = 5        # how often to update the network
+Momentum = 0.9  
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -87,7 +88,11 @@ class Agent():
         states, actions, rewards, next_states, dones = experiences
 
         # Get max predicted Q values (for next states) from target model
-        Q_targets_next = self.qnetwork_target(next_states).detach().max(1)[0].unsqueeze(1)
+        #getting the maximum action from the Q table and applying it in the 
+        Q_targets_next_action = self.qnetwork_local(next_states).detach().max(1)[1].unsqueeze(1)
+        #print(Q_targets_next_action)
+        Q_targets_next = self.qnetwork_target(next_states).gather(1 , Q_targets_next_action)
+        Q_targets_next = Q_targets_next.detach()
         # Compute Q targets for current states 
         Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
 
@@ -120,7 +125,8 @@ class Agent():
 
 
 class ReplayBuffer:
-    """Fixed-size buffer to store experience tuples."""
+    """Fixed-size buffer to store experience tuples. 
+    Also can be used to store the priortized tuples"""
 
     def __init__(self, action_size, buffer_size, batch_size, seed):
         """Initialize a ReplayBuffer object.
@@ -130,6 +136,7 @@ class ReplayBuffer:
             action_size (int): dimension of each action
             buffer_size (int): maximum size of buffer
             batch_size (int): size of each training batch
+            Priority(float):
             seed (int): random seed
         """
         self.action_size = action_size
