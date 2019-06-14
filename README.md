@@ -1,8 +1,8 @@
 # DRLND DQN Banana Navigation Project  
 ---
-This is the first project in the Udacity Deep Reinforcement Learning Nanodegree. It requires to develop and train a [Deep Q-Network (DQN)](https://deepmind.com/research/dqn/) model to collect yellow bananas in a simulator. 
+This is the first project in the Udacity Deep Reinforcement Learning Nanodegree. It requires to develop and train a [Deep Q-Network (DQN)](https://deepmind.com/research/dqn/) model to collect yellow bananas in a simulator.
 
-[![Trained DQN Agent](https://github.com/hortovanyi/DRLND-DQN-Banana-Navigation/blob/master/output/agent_run_writeup.gif?raw=true)](https://www.youtube.com/watch?v=adfIUz7Ex5g)
+[![Trained DQN Agent](navigationgif.gif)](https://www.youtube.com/watch?v=XIbE7aYjcdQ)
 
 The Agent is incentivised to find Yellow bananas with +1 reward and disincentivised to find Blue bananas with -1 reward within the simulator.
 
