@@ -19,7 +19,7 @@ LR = 5e-4               # learning rate
 UPDATE_EVERY = 5      # how often to update the network
 Momentum = 0.9  
 Epislon = 0.99
-min_Epislon = 0.01
+min_Epislon = 0.001
 
 Decay = 0.999
 MaxBeta = 1
@@ -28,8 +28,8 @@ MinBeta = 0
 
 ALPHA = 0.5
 ALPHA2 = 1
-ALPHA_min = 0.03
-Alphadecay = 0.99 
+ALPHA_min = 0.01
+Alphadecay = 0.999 
 ErrorOffset = 0.01
 min_beta = 0.3
 
@@ -64,6 +64,7 @@ class Agent():
         self.memory = PriorityReplayBuffer(action_size, BUFFER_SIZE, BATCH_SIZE,ALPHA,state_type, seed)
         # Initialize time step (for updating every UPDATE_EVERY steps)
         self.t_step = 0
+        
     
     def step(self, state, action, reward, next_state, done):
         # Save experience in replay memory
@@ -74,6 +75,7 @@ class Agent():
         if(Epislon < min_Epislon):
             Epislon = min_Epislon
         beta = 1 - Epislon
+        #print(beta)
         global ALPHA2
         ALPHA2 *= Alphadecay
         if(ALPHA2 < ALPHA_min):
@@ -84,7 +86,7 @@ class Agent():
         if self.t_step == 0:
             # If enough samples are available in memory, get random subset and learn
             if len(self.memory) > BATCH_SIZE:
-                experiences = self.memory.sample(ALPHA,beta)
+                experiences = self.memory.sample(ALPHA2,beta)
                 self.learn(experiences, GAMMA)
 
     def act(self, state, eps=0.):
@@ -122,7 +124,7 @@ class Agent():
 
         # Get max predicted Q values (for next states) from target model
         #getting the maximum action from the Q table and applying it in the 
-        
+        #print("states size" , next_states.size())
         Q_targets_next_action = self.qnetwork_local(next_states).detach().max(1)[1].unsqueeze(1)
         #print(Q_targets_next_action)
         Q_targets_next = self.qnetwork_target(next_states).gather(1 , Q_targets_next_action)
@@ -135,8 +137,10 @@ class Agent():
         #print("expected" , Q_expected , Q_targets)
         # Compute loss
         #loss = F.mse_loss(Q_expected, Q_targets)
-        loss = F.smooth_l1_loss(Q_expected, Q_targets)
-        loss = loss * torch.mean(weights).detach()
+        loss = F.smooth_l1_loss(Q_expected, Q_targets, reduce= False)
+        #print(loss.size())
+        loss = loss * (weights).detach()
+        loss = torch.mean(loss)
         #loss has to be scaled scaled down by weights = (1 /(N*p(i)))^Beta
         #loss = F.l1_loss(Q_expected , Q_targets)
         #print("The Loss", loss)
@@ -193,7 +197,8 @@ class Agent():
 
             Q_expected = self.qnetwork_local(states).gather(1, actions)
             Q_expected = Q_expected.detach()
-            error =  F.l1_loss(Q_expected , Q_targets)
+            #error =  F.l1_loss(Q_expected , Q_targets)
+            error =  torch.abs(Q_expected - Q_targets).cpu().data.numpy()
         return (error.item() + ErrorOffset)
     
     def soft_update(self, local_model, target_model, tau):
@@ -297,7 +302,7 @@ class PriorityReplayBuffer:
         probs ,Choosenindex = self.Batchsample()
         self.selectedIdx = Choosenindex
         weights = (np.size(self.experienceMemory)* probs)**(-(self.beta))
-        weights /= np.max(weights)
+        #weights /= np.max(weights)
         weights = Variable(torch.from_numpy(np.vstack(weights)).float().to(device))
         states = Variable(torch.from_numpy(np.vstack(self.experienceMemory['state'][Choosenindex])).float().to(device))
         actions = Variable(torch.from_numpy(np.vstack(self.experienceMemory['action'][Choosenindex])).long().to(device))
