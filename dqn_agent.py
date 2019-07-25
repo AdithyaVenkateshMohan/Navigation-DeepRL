@@ -4,6 +4,7 @@ from collections import namedtuple, deque
 from queue import PriorityQueue
 
 from model import QNetwork
+from model import QNetworkCNN
 from torch.autograd import Variable
 
 import torch
@@ -39,12 +40,12 @@ print("Device which is used is " , device)
 class Agent():
     """Interacts with and learns from the environment."""
 
-    def __init__(self, state_size, action_size, state_type,seed):
+    def __init__(self, state_size, action_size, state_type,seed ,  visual = False):
         """Initialize an Agent object.
         
         Params
         ======
-            state_size (int): dimension of each state
+            state_size (int): pdimension of each state
             action_size (int): dimension of each action
             seed (int): random seed
             Beta is for sacling down the weights update due to the Priority Queues
@@ -56,8 +57,14 @@ class Agent():
         self.Gamma = GAMMA
 
         # Q-Network
-        self.qnetwork_local = QNetwork(state_size, action_size, seed).to(device)
-        self.qnetwork_target = QNetwork(state_size, action_size, seed).to(device)
+        if(not visual):
+            self.qnetwork_local = QNetwork(state_size, action_size, seed).to(device)
+            self.qnetwork_target = QNetwork(state_size, action_size, seed).to(device)
+        else:
+            self.qnetwork_local = QNetworkCNN(state_size, action_size, seed).to(device)
+            self.qnetwork_target = QNetworkCNN(state_size, action_size, seed).to(device)
+            
+        
         self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=LR)
 
         # Replay memory
@@ -97,8 +104,11 @@ class Agent():
             state (array_like): current state
             eps (float): epsilon, for epsilon-greedy action selection
         """
+        
         state = torch.from_numpy(state).float().unsqueeze(0).to(device)
+        print(state.size())
         self.qnetwork_local.eval()
+        #print(np.size(state))
         with torch.no_grad():
             action_values = self.qnetwork_local(state)
         #print(action_values)
@@ -184,10 +194,12 @@ class Agent():
     def getError(self,states, actions, rewards, next_states, dones):
         
         with torch.no_grad():
+            print("states" , states.shape , next_states.shape)
             states, actions, rewards, next_states, dones = self.ConvnumpyTotorch(states, actions, rewards, next_states, dones)
             #print("states",states , next_states)
             Q_targets_next_action = self.qnetwork_local(next_states).detach().max(1)[1].unsqueeze(1)
             #print("actions",Q_targets_next_action , actions)
+            print(next_states.shape)
             Q_targets_next = self.qnetwork_target(next_states).gather(1 , Q_targets_next_action)
             Q_targets_next = Q_targets_next.detach()
             # Compute Q targets for current states 
@@ -309,6 +321,8 @@ class PriorityReplayBuffer:
         rewards = Variable(torch.from_numpy(np.vstack(self.experienceMemory['reward'][Choosenindex])).float().to(device))
         next_states = Variable(torch.from_numpy(np.vstack(self.experienceMemory['next_state'][Choosenindex])).float().to(device))
         dones = Variable(torch.from_numpy(np.vstack(self.experienceMemory['done'][Choosenindex]).astype(np.uint8)).float().to(device))
+        
+        
   
         return (states, actions, rewards, next_states, dones , weights)
     
